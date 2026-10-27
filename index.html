@@ -31,15 +31,15 @@ const $=id=>document.getElementById(id);
 let scene,camera,renderer,clock,player,verity,door,keyObj,night=1,running=false,gameOver=false,elapsed=0,nightTime=22,hasKey=false,doorOpen=false,monster=false,yaw=0,pitch=0,move={x:0,y:0},isRun=false,lastMsg=0;
 const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
 function makeWorld(){
-scene=new THREE.Scene();scene.background=new THREE.Color(0x07080c);scene.fog=new THREE.FogExp2(0x07080c,.035);
+scene=new THREE.Scene();scene.background=new THREE.Color(0x171506);scene.fog=new THREE.FogExp2(0x171506,.035);
 camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,100);camera.position.set(0,1.65,4);
 renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight(0x8993b3,0x161016,1.1));
 const light=new THREE.PointLight(0xffd5a0,2.0,13);light.position.set(0,3,1);scene.add(light);
-const floorMat=new THREE.MeshStandardMaterial({color:0x292a30,roughness:.95}),wallMat=new THREE.MeshStandardMaterial({color:0x33313a,roughness:1}),darkMat=new THREE.MeshStandardMaterial({color:0x111218,roughness:1});
+const floorMat=new THREE.MeshStandardMaterial({color:0x756a2d,roughness:.95}),wallMat=new THREE.MeshStandardMaterial({color:0xb5a746,roughness:1}),darkMat=new THREE.MeshStandardMaterial({color:0x3a3515,roughness:1});
 function box(w,h,d,x,y,z,mat){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
 box(9,.3,40,0,-.18,-12,floorMat);box(9,.3,40,0,3.3,-12,darkMat);box(.3,3.5,40,-4.5,1.55,-12,wallMat);box(.3,3.5,40,4.5,1.55,-12,wallMat);
-for(let z=5;z>-31;z-=6){box(9,3.5,.3,0,1.55,z,wallMat);let lamp=new THREE.PointLight(0xffe2b2,.8,7);lamp.position.set(0,2.9,z-2);scene.add(lamp);box(.8,.08,.35,0,3,z-2,new THREE.MeshStandardMaterial({color:0xc7b48c,emissive:0x4b3217}))}
+for(let z=5;z>-31;z-=6){box(9,3.5,.3,0,1.55,z,wallMat);let lamp=new THREE.PointLight(0xffdf68,1.15,7);lamp.position.set(0,2.9,z-2);scene.add(lamp);box(.8,.08,.35,0,3,z-2,new THREE.MeshStandardMaterial({color:0xffdf73,emissive:0x77601c}))}
 player=new THREE.Object3D();player.position.set(0,0,4);scene.add(player);player.add(camera);camera.position.set(0,1.65,0);
 const bodyMat=new THREE.MeshStandardMaterial({color:0x777d88,roughness:.8}),eyeMat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xaaaaaa});
 verity=new THREE.Group();scene.add(verity);verity.position.set(0,0,-7);
