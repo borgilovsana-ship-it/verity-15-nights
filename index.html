@@ -25,6 +25,7 @@
 <div id="end"><div class="panel"><h2 id="endtitle">ТЫ ПОЙМАН</h2><p class="sub" id="endtext">Верити нашёл тебя.</p><button class="mainbtn" id="again">ПОПРОБОВАТЬ СНОВА</button></div></div>
 <div id="hud"><div id="top">НОЧЬ <span id="night">1</span> / 15 <span id="status"> • ВЕРИТИ СПОКОЕН</span></div><div id="hint">ЛЕВАЯ СТОРОНА — ДВИЖЕНИЕ<br>ПРАВАЯ — ОБЗОР</div><div id="message"></div><div id="cross">+</div><div id="controls"><div id="stick"><div id="nub"></div></div><div id="buttons"><button class="ctl" id="act">ДЕЙСТВИЕ</button><button class="ctl" id="run">БЕГ</button></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 (()=> {
 const $=id=>document.getElementById(id);
@@ -41,13 +42,30 @@ function box(w,h,d,x,y,z,mat){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d
 box(9,.3,40,0,-.18,-12,floorMat);box(9,.3,40,0,3.3,-12,darkMat);box(.3,3.5,40,-4.5,1.55,-12,wallMat);box(.3,3.5,40,4.5,1.55,-12,wallMat);
 for(let z=5;z>-31;z-=6){box(9,3.5,.3,0,1.55,z,wallMat);let lamp=new THREE.PointLight(0xffdf68,1.15,7);lamp.position.set(0,2.9,z-2);scene.add(lamp);box(.8,.08,.35,0,3,z-2,new THREE.MeshStandardMaterial({color:0xffdf73,emissive:0x77601c}))}
 player=new THREE.Object3D();player.position.set(0,0,4);scene.add(player);player.add(camera);camera.position.set(0,1.65,0);
-const bodyMat=new THREE.MeshStandardMaterial({color:0x777d88,roughness:.8}),eyeMat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xaaaaaa});
 verity=new THREE.Group();scene.add(verity);verity.position.set(0,0,-7);
-const torso=new THREE.Mesh(new THREE.SphereGeometry(.55,16,12),new THREE.MeshStandardMaterial({color:0xd8d8d0,roughness:.9}));torso.position.y=1.1;verity.add(torso);
-const head=new THREE.Mesh(new THREE.SphereGeometry(.35,16,12),new THREE.MeshStandardMaterial({color:0xe8e5df}));head.position.y=1.85;verity.add(head);
-for(let s of [-1,1]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.055,8,8),new THREE.MeshBasicMaterial({color:0x111111}));eye.position.set(s*.13,1.9,-.29);verity.add(eye)}
-function limb(x,y,z,len){const o=new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,len,8),new THREE.MeshStandardMaterial({color:0xd0cec9}));o.position.set(x,y,z);verity.add(o);return o}
+// Сначала показываем простую фигуру, затем заменяем её настоящей GLB-моделью.
+const placeholder=new THREE.Group();verity.add(placeholder);
+const torso=new THREE.Mesh(new THREE.SphereGeometry(.55,16,12),new THREE.MeshStandardMaterial({color:0xd8d8d0,roughness:.9}));torso.position.y=1.1;placeholder.add(torso);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.35,16,12),new THREE.MeshStandardMaterial({color:0xe8e5df}));head.position.y=1.85;placeholder.add(head);
+for(let s of [-1,1]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.055,8,8),new THREE.MeshBasicMaterial({color:0x111111}));eye.position.set(s*.13,1.9,-.29);placeholder.add(eye)}
+function limb(x,y,z,len){const o=new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,len,8),new THREE.MeshStandardMaterial({color:0xd0cec9}));o.position.set(x,y,z);placeholder.add(o);return o}
 limb(-.43,.55,0,.9);limb(.43,.55,0,.9);limb(-.2,-.1,0,.8);limb(.2,-.1,0,.8);
+const gltfLoader=new THREE.GLTFLoader();
+gltfLoader.load('./veritytm__veritytm.glb',gltf=>{
+  const model=gltf.scene;
+  model.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(model);
+  const size=bounds.getSize(new THREE.Vector3());
+  if(size.y>0){
+    model.scale.setScalar(2.05/size.y);
+    model.updateMatrixWorld(true);
+    const scaledBounds=new THREE.Box3().setFromObject(model);
+    model.position.y-=scaledBounds.min.y;
+  }
+  model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide}}});
+  verity.remove(placeholder);
+  verity.add(model);
+},undefined,error=>console.error('Не удалось загрузить модель Верити:',error));
 door=box(2.1,2.8,.2,0,1.25,-30.7,new THREE.MeshStandardMaterial({color:0x4a3027,roughness:.8}));door.name='door';
 keyObj=new THREE.Group();scene.add(keyObj);keyObj.position.set(2.5,.45,-18);
 const km=new THREE.MeshStandardMaterial({color:0xffd34f,metalness:.7,roughness:.25});
