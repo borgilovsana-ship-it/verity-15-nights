@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#08090d">
+<title>VERITY: НЕ ДОВЕРЯЙ ЕМУ</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050609;color:#eee;font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none;display:none;text-shadow:0 2px 5px #000}
+#top{position:absolute;top:12px;left:14px;font-weight:800;letter-spacing:1px;font-size:14px}#hint{position:absolute;top:12px;right:14px;text-align:right;font-size:12px;color:#ccc}
+#message{position:absolute;top:22%;left:8%;right:8%;text-align:center;font-size:clamp(17px,4vw,27px);font-weight:700;color:#f3eeee}
+#cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:20px;color:#ddd}
+#controls{position:absolute;inset:auto 0 14px;display:flex;justify-content:space-between;align-items:end;padding:0 18px;pointer-events:auto}
+#stick{width:112px;height:112px;border:2px solid #ffffff45;border-radius:50%;background:#ffffff12;position:relative}
+#nub{position:absolute;width:44px;height:44px;border-radius:50%;background:#d9d9d94d;border:1px solid #fff7;left:32px;top:32px}
+#buttons{display:flex;gap:10px;align-items:end}.ctl{border:1px solid #ffffff55;background:#15171ccc;color:#fff;border-radius:50%;width:62px;height:62px;font-weight:800;font-size:12px}.ctl:active{background:#762d35}
+#start,#end{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,#20222a 0%,#050609 72%);padding:24px;text-align:center}
+.panel{width:min(520px,100%)}h1{font-size:clamp(28px,8vw,54px);line-height:1.02;margin:0 0 14px;letter-spacing:2px}h1 span{color:#c32d3b}.sub{color:#b9bbc4;line-height:1.5;margin:0 auto 22px;max-width:430px}.mainbtn{border:0;background:#a92332;color:#fff;padding:15px 28px;border-radius:7px;font-size:16px;font-weight:900;letter-spacing:1px}.small{font-size:12px;color:#777;margin-top:18px}#end{display:none}#end h2{font-size:30px}
+@media(orientation:portrait){#start:after{content:"Для лучшего управления поверни телефон горизонтально";position:absolute;bottom:18px;left:20px;right:20px;color:#aaa;font-size:12px}}
+</style>
+</head>
+<body>
+<div id="start"><div class="panel"><h1>VERITY:<br><span>НЕ ДОВЕРЯЙ ЕМУ</span></h1><p class="sub">Ты проведёшь здесь 15 ночей. Сначала Верити кажется другом. Но не верь тому, что видишь.<br><br><b>Найди выход. Не дай ему тебя поймать.</b></p><button class="mainbtn" id="begin">НАЧАТЬ НОЧЬ 1</button><div class="small">3D HORROR • ОДИНОЧНАЯ ИГРА • МОБИЛЬНОЕ УПРАВЛЕНИЕ</div></div></div>
+<div id="end"><div class="panel"><h2 id="endtitle">ТЫ ПОЙМАН</h2><p class="sub" id="endtext">Верити нашёл тебя.</p><button class="mainbtn" id="again">ПОПРОБОВАТЬ СНОВА</button></div></div>
+<div id="hud"><div id="top">НОЧЬ <span id="night">1</span> / 15 <span id="status"> • ВЕРИТИ СПОКОЕН</span></div><div id="hint">ЛЕВАЯ СТОРОНА — ДВИЖЕНИЕ<br>ПРАВАЯ — ОБЗОР</div><div id="message"></div><div id="cross">+</div><div id="controls"><div id="stick"><div id="nub"></div></div><div id="buttons"><button class="ctl" id="act">ДЕЙСТВИЕ</button><button class="ctl" id="run">БЕГ</button></div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(()=> {
+const $=id=>document.getElementById(id);
+let scene,camera,renderer,clock,player,verity,door,keyObj,night=1,running=false,gameOver=false,elapsed=0,nightTime=22,hasKey=false,doorOpen=false,monster=false,yaw=0,pitch=0,move={x:0,y:0},isRun=false,lastMsg=0;
+const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
+function makeWorld(){
+scene=new THREE.Scene();scene.background=new THREE.Color(0x07080c);scene.fog=new THREE.FogExp2(0x07080c,.035);
+camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,100);camera.position.set(0,1.65,4);
+renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0x8993b3,0x161016,1.1));
+const light=new THREE.PointLight(0xffd5a0,2.0,13);light.position.set(0,3,1);scene.add(light);
+const floorMat=new THREE.MeshStandardMaterial({color:0x292a30,roughness:.95}),wallMat=new THREE.MeshStandardMaterial({color:0x33313a,roughness:1}),darkMat=new THREE.MeshStandardMaterial({color:0x111218,roughness:1});
+function box(w,h,d,x,y,z,mat){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
+box(9,.3,40,0,-.18,-12,floorMat);box(9,.3,40,0,3.3,-12,darkMat);box(.3,3.5,40,-4.5,1.55,-12,wallMat);box(.3,3.5,40,4.5,1.55,-12,wallMat);
+for(let z=5;z>-31;z-=6){box(9,3.5,.3,0,1.55,z,wallMat);let lamp=new THREE.PointLight(0xffe2b2,.8,7);lamp.position.set(0,2.9,z-2);scene.add(lamp);box(.8,.08,.35,0,3,z-2,new THREE.MeshStandardMaterial({color:0xc7b48c,emissive:0x4b3217}))}
+player=new THREE.Object3D();player.position.set(0,0,4);scene.add(player);player.add(camera);camera.position.set(0,1.65,0);
+const bodyMat=new THREE.MeshStandardMaterial({color:0x777d88,roughness:.8}),eyeMat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xaaaaaa});
+verity=new THREE.Group();scene.add(verity);verity.position.set(0,0,-7);
+const torso=new THREE.Mesh(new THREE.SphereGeometry(.55,16,12),new THREE.MeshStandardMaterial({color:0xd8d8d0,roughness:.9}));torso.position.y=1.1;verity.add(torso);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.35,16,12),new THREE.MeshStandardMaterial({color:0xe8e5df}));head.position.y=1.85;verity.add(head);
+for(let s of [-1,1]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.055,8,8),new THREE.MeshBasicMaterial({color:0x111111}));eye.position.set(s*.13,1.9,-.29);verity.add(eye)}
+function limb(x,y,z,len){const o=new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,len,8),new THREE.MeshStandardMaterial({color:0xd0cec9}));o.position.set(x,y,z);verity.add(o);return o}
+limb(-.43,.55,0,.9);limb(.43,.55,0,.9);limb(-.2,-.1,0,.8);limb(.2,-.1,0,.8);
+door=box(2.1,2.8,.2,0,1.25,-30.7,new THREE.MeshStandardMaterial({color:0x4a3027,roughness:.8}));door.name='door';
+keyObj=new THREE.Group();scene.add(keyObj);keyObj.position.set(2.5,.45,-18);
+const km=new THREE.MeshStandardMaterial({color:0xffd34f,metalness:.7,roughness:.25});
+const ring=new THREE.Mesh(new THREE.TorusGeometry(.15,.045,8,16),km);ring.rotation.x=Math.PI/2;keyObj.add(ring);
+const shaft=new THREE.Mesh(new THREE.BoxGeometry(.07,.07,.48),km);shaft.position.z=-.25;keyObj.add(shaft);
+const tooth=new THREE.Mesh(new THREE.BoxGeometry(.16,.07,.08),km);tooth.position.set(.04,0,-.42);keyObj.add(tooth);
+}
+function showMessage(t,secs=3){$('message').textContent=t;lastMsg=secs}
+function begin(){if(!scene)makeWorld();$('start').style.display='none';$('end').style.display='none';$('hud').style.display='block';night=1;elapsed=0;hasKey=false;doorOpen=false;monster=false;gameOver=false;running=true;player.position.set(0,0,4);yaw=0;pitch=0;verity.position.set(0,0,-7);verity.scale.set(1,1,1);keyObj.visible=true;door.material.color.set(0x4a3027);$('night').textContent=night;$('status').textContent=' • ВЕРИТИ СПОКОЕН';showMessage('Ночь 1. Верити ждёт тебя впереди.',4);clock=new THREE.Clock();animate()}
+function nextNight(){night++;elapsed=0;$('night').textContent=night;
+if(night===5)showMessage('Верити: «Через пять дней случится нечто ужасное…»',5);
+else if(night===10)showMessage('Верити: «Я предупреждал тебя. Беги, пока можешь.»',5);
+else if(night===11){monster=true;verity.scale.set(.72,2.1,.72);verity.position.set(0,0,-12);$('status').textContent=' • ОН ИДЁТ ЗА ТОБОЙ';showMessage('ОН БОЛЬШЕ НЕ ТВОЙ ДРУГ. БЕГИ!',5)}
+else if(night===15){showMessage('Последняя ночь. Найди ключ и открой дверь!',5);keyObj.position.set(2.5,.45,-18)}
+else showMessage('Ночь '+night+'. Продолжай идти…',3);
+}
+function finish(win){running=false;gameOver=true;$('hud').style.display='none';$('end').style.display='flex';$('endtitle').textContent=win?'ТЫ СБЕЖАЛ':'ТЫ ПОЙМАН';$('endtext').textContent=win?'Ты открыл дверь и выбрался наружу. Но что-то последовало за тобой…':'Верити настиг тебя во тьме. Попробуй ещё раз.'}
+function action(){if(!running)return;const dist=player.position.distanceTo(keyObj.position);if(night===15&&!hasKey&&keyObj.visible&&dist<2.3){hasKey=true;keyObj.visible=false;showMessage('Ты подобрал ключ. Теперь к двери!',3);return}
+const dd=player.position.distanceTo(door.position);if(night===15&&dd<2.8){if(hasKey){finish(true)}else showMessage('Дверь заперта. Найди ключ!',2);return}
+showMessage('Здесь нечего использовать.',1.5)}
+function animate(){if(!running)return;requestAnimationFrame(animate);const dt=Math.min(clock.getDelta(),.05);elapsed+=dt;
+if(elapsed>22){if(night<15)nextNight();else elapsed=0}
+if(lastMsg>0){lastMsg-=dt;if(lastMsg<=0)$('message').textContent=''}
+const speed=(isRun?4.6:2.5)*dt;const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));player.position.addScaledVector(forward,move.y*speed);player.position.addScaledVector(right,move.x*speed);player.position.x=THREE.MathUtils.clamp(player.position.x,-3.7,3.7);player.position.z=THREE.MathUtils.clamp(player.position.z,-29.5,4.5);
+camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;
+keyObj.rotation.y+=dt*1.4;
+if(monster){const dx=player.position.x-verity.position.x,dz=player.position.z-verity.position.z,d=Math.hypot(dx,dz);if(d>.7){verity.position.x+=dx/d*dt*(.7+night*.025);verity.position.z+=dz/d*dt*(.7+night*.025)}verity.lookAt(player.position.x,1.2,player.position.z);if(d<1.25)finish(false)}
+renderer.render(scene,camera)}
+$('begin').addEventListener('click',begin);$('again').addEventListener('click',()=>{if(renderer){renderer.dispose();renderer.domElement.remove();scene=null;renderer=null}begin()});
+$('act').addEventListener('click',action);$('run').addEventListener('touchstart',e=>{e.preventDefault();isRun=true});$('run').addEventListener('touchend',()=>isRun=false);$('run').addEventListener('mousedown',()=>isRun=true);$('run').addEventListener('mouseup',()=>isRun=false);
+const stick=$('stick'),nub=$('nub');let stickId=null;
+stick.addEventListener('pointerdown',e=>{stickId=e.pointerId;stick.setPointerCapture(stickId);stickMove(e)});stick.addEventListener('pointermove',e=>{if(e.pointerId===stickId)stickMove(e)});function stickMove(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,len=Math.hypot(dx,dy),max=35,scale=Math.min(1,max/(len||1));nub.style.left=(32+dx*scale)+'px';nub.style.top=(32+dy*scale)+'px';move.x=dx/max;move.y=-dy/max;const m=Math.hypot(move.x,move.y);if(m>1){move.x/=m;move.y/=m}}
+function resetStick(){stickId=null;move={x:0,y:0};nub.style.left='32px';nub.style.top='32px'}stick.addEventListener('pointerup',resetStick);stick.addEventListener('pointercancel',resetStick);
+let lookId=null,lx=0,ly=0;rendererlessTouchSetup();
+function rendererlessTouchSetup(){document.addEventListener('pointerdown',e=>{if(e.clientX>innerWidth*.48&&e.clientY<innerHeight-145){lookId=e.pointerId;lx=e.clientX;ly=e.clientY}});document.addEventListener('pointermove',e=>{if(e.pointerId===lookId&&running){yaw-=(e.clientX-lx)*.006;pitch=THREE.MathUtils.clamp(pitch-(e.clientY-ly)*.004,-1.2,1.2);lx=e.clientX;ly=e.clientY}});document.addEventListener('pointerup',e=>{if(e.pointerId===lookId)lookId=null})}
+addEventListener('keydown',e=>{if(e.key==='w'||e.key==='ArrowUp')move.y=1;if(e.key==='s'||e.key==='ArrowDown')move.y=-1;if(e.key==='a'||e.key==='ArrowLeft')move.x=-1;if(e.key==='d'||e.key==='ArrowRight')move.x=1;if(e.key==='Shift')isRun=true;if(e.key==='e'||e.key===' ')action()});addEventListener('keyup',e=>{if(['w','s','ArrowUp','ArrowDown'].includes(e.key))move.y=0;if(['a','d','ArrowLeft','ArrowRight'].includes(e.key))move.x=0;if(e.key==='Shift')isRun=false});
+addEventListener('resize',()=>{if(camera&&renderer){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}});
+})();
+</script>
+</body>
+</html>
