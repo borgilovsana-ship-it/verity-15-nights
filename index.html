@@ -30,7 +30,8 @@ import { GLTFLoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/GL
 (()=> {
 const $=id=>document.getElementById(id);
 let scene,camera,renderer,clock,player,verity,door,keyObj,night=1,running=false,gameOver=false,elapsed=0,nightTime=22,hasKey=false,doorOpen=false,monster=false,yaw=0,pitch=0,move={x:0,y:0},isRun=false,lastMsg=0;
-const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);\nlet fallbackMeshes=[],backroomsLoaded=false;
+const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
+let fallbackMeshes=[],backroomsLoaded=false;
 function makeWorld(){
 scene=new THREE.Scene();scene.background=new THREE.Color(0x24200d);scene.fog=new THREE.FogExp2(0x24200d,.018);
 camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,100);camera.position.set(0,1.65,4);
