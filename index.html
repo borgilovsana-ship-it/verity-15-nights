@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#08090d">
 <title>VERITY: НЕ ДОВЕРЯЙ ЕМУ</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050609;color:#eee;font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}canvas{display:block}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#d8d8b8;color:#eee;font-family:system-ui,-apple-system,Segoe UI,sans-serif;touch-action:none}canvas{display:block}
 #hud{position:fixed;inset:0;pointer-events:none;display:none;text-shadow:0 2px 5px #000}
 #top{position:absolute;top:12px;left:14px;font-weight:800;letter-spacing:1px;font-size:14px}#hint{position:absolute;top:12px;right:14px;text-align:right;font-size:12px;color:#ccc}
 #message{position:absolute;top:22%;left:8%;right:8%;text-align:center;font-size:clamp(17px,4vw,27px);font-weight:700;color:#f3eeee}
@@ -33,27 +33,27 @@ let scene,camera,renderer,clock,player,verity,door,keyObj,night=1,running=false,
 const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
 let fallbackMeshes=[],backroomsLoaded=false;
 function makeWorld(){
-scene=new THREE.Scene();scene.background=new THREE.Color(0x24200d);scene.fog=new THREE.FogExp2(0x24200d,.018);
+scene=new THREE.Scene();scene.background=new THREE.Color(0xc9c7a5);scene.fog=null;
 camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,100);camera.position.set(0,1.65,4);
 renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.65;
 document.body.appendChild(renderer.domElement);
 // Мягкий общий свет, чтобы стены и модель не проваливались в чёрный.
-scene.add(new THREE.HemisphereLight(0xffedbf,0x514526,2.0));
-scene.add(new THREE.AmbientLight(0xffe9b0,0.55));
-const light=new THREE.PointLight(0xffd58a,38,18,1.7);light.position.set(0,2.8,1);light.castShadow=true;light.shadow.mapSize.set(1024,1024);light.shadow.bias=-0.00015;scene.add(light);
-const fillLight=new THREE.PointLight(0xffe9ad,16,14,1.8);fillLight.position.set(0,2.4,-7);scene.add(fillLight);
+scene.add(new THREE.HemisphereLight(0xfff4d6,0x89866a,3.2));
+scene.add(new THREE.AmbientLight(0xfff0c8,1.5));
+const light=new THREE.PointLight(0xffe8b0,55,24,1.5);light.position.set(0,2.8,1);light.castShadow=true;light.shadow.mapSize.set(1024,1024);light.shadow.bias=-0.00015;scene.add(light);
+const fillLight=new THREE.PointLight(0xfff0c8,32,20,1.5);fillLight.position.set(0,2.4,-7);scene.add(fillLight);
 const floorMat=new THREE.MeshStandardMaterial({color:0x756a2d,roughness:.95}),wallMat=new THREE.MeshStandardMaterial({color:0xb5a746,roughness:1}),darkMat=new THREE.MeshStandardMaterial({color:0x3a3515,roughness:1});
 function box(w,h,d,x,y,z,mat){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);fallbackMeshes.push(o);return o}
 box(9,.3,40,0,-.18,-12,floorMat);box(9,.3,40,0,3.3,-12,darkMat);box(.3,3.5,40,-4.5,1.55,-12,wallMat);box(.3,3.5,40,4.5,1.55,-12,wallMat);
 const lampLights=[];
 for(let z=5;z>-31;z-=6){
  box(9,3.5,.3,0,1.55,z,wallMat);
- const lamp=new THREE.PointLight(0xffdf86,24,12,1.8);lamp.position.set(0,2.82,z-2);lamp.castShadow=(z===5||z===-7);scene.add(lamp);lampLights.push(lamp);
+ const lamp=new THREE.PointLight(0xffedb0,42,16,1.5);lamp.position.set(0,2.82,z-2);lamp.castShadow=(z===5||z===-7);scene.add(lamp);lampLights.push(lamp);
  box(.8,.08,.35,0,3,z-2,new THREE.MeshStandardMaterial({color:0xffe39a,emissive:0xffc34d,emissiveIntensity:1.4,roughness:.35}));
 }
 player=new THREE.Object3D();player.position.set(0,0,4);scene.add(player);player.add(camera);camera.position.set(0,1.65,0);
@@ -95,7 +95,7 @@ gltfLoader.load('./backrooms.glb',gltf=>{
   map.position.x-=center.x;
   map.position.z-=center.z;
   map.position.y-=bounds.min.y;
-  map.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material)o.material.side=THREE.DoubleSide}});
+  map.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material){o.material.side=THREE.DoubleSide;if(o.material.color)o.material.color.multiplyScalar(1.35);if('emissive' in o.material)o.material.emissiveIntensity=Math.max(o.material.emissiveIntensity||0,0.18)}}});
   scene.add(map);
   // Убираем тестовый коридор, чтобы не перекрывал загруженную карту; дверь оставляем как цель.
   for(const mesh of fallbackMeshes){if(mesh!==door)scene.remove(mesh)}
@@ -129,8 +129,8 @@ const speed=(isRun?4.6:2.5)*dt;const forward=new THREE.Vector3(-Math.sin(yaw),0,
 camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;
 keyObj.rotation.y+=dt*1.4;
 // Едва заметное мерцание ламп, без резких вспышек.
-for(let i=0;i<lampLights.length;i++){const wave=1+Math.sin(elapsed*2.1+i*1.7)*0.045;lampLights[i].intensity=24*wave;}
-light.intensity=38*(1+Math.sin(elapsed*1.3)*0.025);
+for(let i=0;i<lampLights.length;i++){const wave=1+Math.sin(elapsed*2.1+i*1.7)*0.045;lampLights[i].intensity=42*wave;}
+light.intensity=55*(1+Math.sin(elapsed*1.3)*0.015);
 if(monster){const dx=player.position.x-verity.position.x,dz=player.position.z-verity.position.z,d=Math.hypot(dx,dz);if(d>.7){verity.position.x+=dx/d*dt*(.7+night*.025);verity.position.z+=dz/d*dt*(.7+night*.025)}verity.lookAt(player.position.x,1.2,player.position.z);if(d<1.25)finish(false)}
 renderer.render(scene,camera)}
 $('begin').addEventListener('click',begin);$('again').addEventListener('click',()=>{if(renderer){renderer.dispose();renderer.domElement.remove();scene=null;renderer=null}begin()});
