@@ -24,9 +24,9 @@
 <div id="start"><div class="panel"><h1>VERITY:<br><span>НЕ ДОВЕРЯЙ ЕМУ</span></h1><p class="sub">Ты проведёшь здесь 15 ночей. Сначала Верити кажется другом. Но не верь тому, что видишь.<br><br><b>Найди выход. Не дай ему тебя поймать.</b></p><button class="mainbtn" id="begin">НАЧАТЬ НОЧЬ 1</button><div class="small">3D HORROR • ОДИНОЧНАЯ ИГРА • МОБИЛЬНОЕ УПРАВЛЕНИЕ</div></div></div>
 <div id="end"><div class="panel"><h2 id="endtitle">ТЫ ПОЙМАН</h2><p class="sub" id="endtext">Верити нашёл тебя.</p><button class="mainbtn" id="again">ПОПРОБОВАТЬ СНОВА</button></div></div>
 <div id="hud"><div id="top">НОЧЬ <span id="night">1</span> / 15 <span id="status"> • ВЕРИТИ СПОКОЕН</span></div><div id="hint">ЛЕВАЯ СТОРОНА — ДВИЖЕНИЕ<br>ПРАВАЯ — ОБЗОР</div><div id="message"></div><div id="cross">+</div><div id="controls"><div id="stick"><div id="nub"></div></div><div id="buttons"><button class="ctl" id="act">ДЕЙСТВИЕ</button><button class="ctl" id="run">БЕГ</button></div></div></div>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
-<script>
+<script type="module">
+import * as THREE from 'https://esm.sh/three@0.160.0';
+import { GLTFLoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 (()=> {
 const $=id=>document.getElementById(id);
 let scene,camera,renderer,clock,player,verity,door,keyObj,night=1,running=false,gameOver=false,elapsed=0,nightTime=22,hasKey=false,doorOpen=false,monster=false,yaw=0,pitch=0,move={x:0,y:0},isRun=false,lastMsg=0;
@@ -50,7 +50,7 @@ const head=new THREE.Mesh(new THREE.SphereGeometry(.35,16,12),new THREE.MeshStan
 for(let s of [-1,1]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.055,8,8),new THREE.MeshBasicMaterial({color:0x111111}));eye.position.set(s*.13,1.9,-.29);placeholder.add(eye)}
 function limb(x,y,z,len){const o=new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,len,8),new THREE.MeshStandardMaterial({color:0xd0cec9}));o.position.set(x,y,z);placeholder.add(o);return o}
 limb(-.43,.55,0,.9);limb(.43,.55,0,.9);limb(-.2,-.1,0,.8);limb(.2,-.1,0,.8);
-const gltfLoader=new THREE.GLTFLoader();
+const gltfLoader=new GLTFLoader();
 gltfLoader.load('./veritytm__veritytm.glb',gltf=>{
   const model=gltf.scene;
   model.updateMatrixWorld(true);
