@@ -30,7 +30,7 @@ import { GLTFLoader } from 'https://esm.sh/three@0.160.0/examples/jsm/loaders/GL
 (()=> {
 const $=id=>document.getElementById(id);
 let scene,camera,renderer,clock,player,verity,door,keyObj,night=1,running=false,gameOver=false,elapsed=0,nightTime=22,hasKey=false,doorOpen=false,monster=false,yaw=0,pitch=0,move={x:0,y:0},isRun=false,lastMsg=0;
-const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
+const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);\nlet fallbackMeshes=[],backroomsLoaded=false;
 function makeWorld(){
 scene=new THREE.Scene();scene.background=new THREE.Color(0x24200d);scene.fog=new THREE.FogExp2(0x24200d,.018);
 camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,100);camera.position.set(0,1.65,4);
@@ -47,7 +47,7 @@ scene.add(new THREE.AmbientLight(0xffe9b0,0.55));
 const light=new THREE.PointLight(0xffd58a,38,18,1.7);light.position.set(0,2.8,1);light.castShadow=true;light.shadow.mapSize.set(1024,1024);light.shadow.bias=-0.00015;scene.add(light);
 const fillLight=new THREE.PointLight(0xffe9ad,16,14,1.8);fillLight.position.set(0,2.4,-7);scene.add(fillLight);
 const floorMat=new THREE.MeshStandardMaterial({color:0x756a2d,roughness:.95}),wallMat=new THREE.MeshStandardMaterial({color:0xb5a746,roughness:1}),darkMat=new THREE.MeshStandardMaterial({color:0x3a3515,roughness:1});
-function box(w,h,d,x,y,z,mat){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
+function box(w,h,d,x,y,z,mat){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);fallbackMeshes.push(o);return o}
 box(9,.3,40,0,-.18,-12,floorMat);box(9,.3,40,0,3.3,-12,darkMat);box(.3,3.5,40,-4.5,1.55,-12,wallMat);box(.3,3.5,40,4.5,1.55,-12,wallMat);
 const lampLights=[];
 for(let z=5;z>-31;z-=6){
@@ -80,6 +80,27 @@ gltfLoader.load('./veritytm__veritytm.glb',gltf=>{
   verity.remove(placeholder);
   verity.add(model);
 },undefined,error=>console.error('Не удалось загрузить модель Верити:',error));
+ // Загружаем пользовательскую 3D-карту Backrooms; если файл недоступен, остаётся коридор-запасной вариант.
+gltfLoader.load('./backrooms.glb',gltf=>{
+  const map=gltf.scene;
+  map.updateMatrixWorld(true);
+  let bounds=new THREE.Box3().setFromObject(map);
+  const size=bounds.getSize(new THREE.Vector3());
+  const horizontal=Math.max(size.x,size.z);
+  if(horizontal>0) map.scale.setScalar(42/horizontal);
+  map.updateMatrixWorld(true);
+  bounds=new THREE.Box3().setFromObject(map);
+  const center=bounds.getCenter(new THREE.Vector3());
+  map.position.x-=center.x;
+  map.position.z-=center.z;
+  map.position.y-=bounds.min.y;
+  map.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;if(o.material)o.material.side=THREE.DoubleSide}});
+  scene.add(map);
+  // Убираем тестовый коридор, чтобы не перекрывал загруженную карту; дверь оставляем как цель.
+  for(const mesh of fallbackMeshes){if(mesh!==door)scene.remove(mesh)}
+  backroomsLoaded=true;
+  console.info('Карта Backrooms загружена');
+},undefined,error=>console.error('Не удалось загрузить backrooms.glb:',error));
 door=box(2.1,2.8,.2,0,1.25,-30.7,new THREE.MeshStandardMaterial({color:0x4a3027,roughness:.8}));door.name='door';
 keyObj=new THREE.Group();scene.add(keyObj);keyObj.position.set(2.5,.45,-18);
 const km=new THREE.MeshStandardMaterial({color:0xffd34f,metalness:.7,roughness:.25});
