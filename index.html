@@ -32,15 +32,29 @@ const $=id=>document.getElementById(id);
 let scene,camera,renderer,clock,player,verity,door,keyObj,night=1,running=false,gameOver=false,elapsed=0,nightTime=22,hasKey=false,doorOpen=false,monster=false,yaw=0,pitch=0,move={x:0,y:0},isRun=false,lastMsg=0;
 const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
 function makeWorld(){
-scene=new THREE.Scene();scene.background=new THREE.Color(0x171506);scene.fog=new THREE.FogExp2(0x171506,.035);
+scene=new THREE.Scene();scene.background=new THREE.Color(0x24200d);scene.fog=new THREE.FogExp2(0x24200d,.018);
 camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,100);camera.position.set(0,1.65,4);
-renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;document.body.appendChild(renderer.domElement);
-scene.add(new THREE.HemisphereLight(0x8993b3,0x161016,1.1));
-const light=new THREE.PointLight(0xffd5a0,2.0,13);light.position.set(0,3,1);scene.add(light);
+renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.18;
+document.body.appendChild(renderer.domElement);
+// Мягкий общий свет, чтобы стены и модель не проваливались в чёрный.
+scene.add(new THREE.HemisphereLight(0xffedbf,0x514526,2.0));
+scene.add(new THREE.AmbientLight(0xffe9b0,0.55));
+const light=new THREE.PointLight(0xffd58a,38,18,1.7);light.position.set(0,2.8,1);light.castShadow=true;light.shadow.mapSize.set(1024,1024);light.shadow.bias=-0.00015;scene.add(light);
+const fillLight=new THREE.PointLight(0xffe9ad,16,14,1.8);fillLight.position.set(0,2.4,-7);scene.add(fillLight);
 const floorMat=new THREE.MeshStandardMaterial({color:0x756a2d,roughness:.95}),wallMat=new THREE.MeshStandardMaterial({color:0xb5a746,roughness:1}),darkMat=new THREE.MeshStandardMaterial({color:0x3a3515,roughness:1});
 function box(w,h,d,x,y,z,mat){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o}
 box(9,.3,40,0,-.18,-12,floorMat);box(9,.3,40,0,3.3,-12,darkMat);box(.3,3.5,40,-4.5,1.55,-12,wallMat);box(.3,3.5,40,4.5,1.55,-12,wallMat);
-for(let z=5;z>-31;z-=6){box(9,3.5,.3,0,1.55,z,wallMat);let lamp=new THREE.PointLight(0xffdf68,1.15,7);lamp.position.set(0,2.9,z-2);scene.add(lamp);box(.8,.08,.35,0,3,z-2,new THREE.MeshStandardMaterial({color:0xffdf73,emissive:0x77601c}))}
+const lampLights=[];
+for(let z=5;z>-31;z-=6){
+ box(9,3.5,.3,0,1.55,z,wallMat);
+ const lamp=new THREE.PointLight(0xffdf86,24,12,1.8);lamp.position.set(0,2.82,z-2);lamp.castShadow=(z===5||z===-7);scene.add(lamp);lampLights.push(lamp);
+ box(.8,.08,.35,0,3,z-2,new THREE.MeshStandardMaterial({color:0xffe39a,emissive:0xffc34d,emissiveIntensity:1.4,roughness:.35}));
+}
 player=new THREE.Object3D();player.position.set(0,0,4);scene.add(player);player.add(camera);camera.position.set(0,1.65,0);
 verity=new THREE.Group();scene.add(verity);verity.position.set(0,0,-7);
 // Сначала показываем простую фигуру, затем заменяем её настоящей GLB-моделью.
@@ -92,6 +106,9 @@ if(lastMsg>0){lastMsg-=dt;if(lastMsg<=0)$('message').textContent=''}
 const speed=(isRun?4.6:2.5)*dt;const forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw)),right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));player.position.addScaledVector(forward,move.y*speed);player.position.addScaledVector(right,move.x*speed);player.position.x=THREE.MathUtils.clamp(player.position.x,-3.7,3.7);player.position.z=THREE.MathUtils.clamp(player.position.z,-29.5,4.5);
 camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch;
 keyObj.rotation.y+=dt*1.4;
+// Едва заметное мерцание ламп, без резких вспышек.
+for(let i=0;i<lampLights.length;i++){const wave=1+Math.sin(elapsed*2.1+i*1.7)*0.045;lampLights[i].intensity=24*wave;}
+light.intensity=38*(1+Math.sin(elapsed*1.3)*0.025);
 if(monster){const dx=player.position.x-verity.position.x,dz=player.position.z-verity.position.z,d=Math.hypot(dx,dz);if(d>.7){verity.position.x+=dx/d*dt*(.7+night*.025);verity.position.z+=dz/d*dt*(.7+night*.025)}verity.lookAt(player.position.x,1.2,player.position.z);if(d<1.25)finish(false)}
 renderer.render(scene,camera)}
 $('begin').addEventListener('click',begin);$('again').addEventListener('click',()=>{if(renderer){renderer.dispose();renderer.domElement.remove();scene=null;renderer=null}begin()});
